@@ -1,0 +1,34 @@
+
+version: "3.8"
+services:
+  app:
+    build: ./app
+    container_name: hats-for-parties
+    ports:
+      - ${PORT}:${PORT}
+    environment:
+      - PORT=${PORT}
+      - MONGODB_URI=mongodb://mongodb:27017
+      - TOTAL_HATS=${TOTAL_HATS}
+      - TOTAL_HATS_PER_PARTY=${TOTAL_HATS_PER_PARTY}
+      - CLEANING_TIME_IN_SECONDS=${CLEANING_TIME_IN_SECONDS}
+      - HATS_COLLECTION_NAME=${HATS_COLLECTION_NAME}
+      - DB_NAME=${DB_NAME}
+    depends_on:
+      - mongodb_container
+  mongodb_container:
+    image: mongo:latest
+    container_name: mongodb
+    environment:
+      - TOTAL_HATS=${TOTAL_HATS}
+      - DB_NAME=${DB_NAME}
+      - HATS_COLLECTION_NAME=${HATS_COLLECTION_NAME}
+    #   MONGO_INITDB_ROOT_USERNAME: root
+    #   MONGO_INITDB_ROOT_PASSWORD: rootpassword
+    ports:
+      - 27017:27017
+    volumes:
+      - ./mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+
+volumes:
+  mongodb_data_container:
