@@ -7,13 +7,38 @@ Install docker(https://docs.docker.com/get-docker/) and docker-compose (https://
 ## Requirements
 Create a .env file in the root directory with the following variables:
 ```
-PORT=9090
+PORT=9090 # Port to run the server on
+TOTAL_HATS=100 # Total number of available hats
+TOTAL_HATS_PER_PARTY=10 # Total number of hats per party
+CLEANING_TIME_IN_SECONDS=20 # Time in seconds when hat is available after returned
+HATS_COLLECTION_NAME=hats # Name of the collection in the database
+DB_NAME=hats-for-parties # Name of the database
 ```
 
 ## Scripts
-* start application: `docker compose up -d --build`
+* start application: `docker compose up --build`
 * stop application: `docker compose down`
 
+## Endpoints
+* `POST /start-party/{hatsNumber}` - Rent hatsNumber hats for a party (returns party id to be used to return hats)
+* `POST end-party/{partyID}` - Return hats for party with ID partyID
+
+## Technical Implementation
+There are 2 routes in the application, to start and end the party. The route that starts the party, returns also a 10 characters string with random capitalized letters that is assigned to the party. This string is used to end the party. The route that ends the party, returns the hats to the pool of available hats. The hats are stored in a MongoDB database in a collection called hats in the following format:
+```
+{
+    "_id": "60a1b1f9b9b1b9b1b9b1b9b1",
+    "lastUsage": "2022-09-25T12:04:44.007+00:00", // Date when the hat was returned, it is used to calculate when the hat is available again
+    "usedInPartyId": "XVLBZGBAIC", // Party ID that the hat is used in, if the hat is available, this field is null
+}
+```
+When container is build first time, in `./mongo` is an initialize script, that creates ${TOTAL_HATS} documents with hat data.
+
+
+To ensure concurrency a redis mutex technique is used (https://github.com/go-redsync/redsync). When rent hats handler is called, it locks redis, and if Lock() is called again, it will wait until Unlock have been called. It is not ideal solution, but it is the best I could come up with in the given time. Ideally, you would probably have one more service with a single instance that only does write, and you could use a queue to send ot it messages, and scale API services.
+Or a single API service using mongoDB sessions(had some troubles ot set up redis replica, so decided to use just redis sync).
+
+P.S. Haven's added unit tests as running out of time, though router is prepared to be unit tested (handlers are assigned to an interface, so they can be mocked using mockgen for example).
 
 ## Requirements
 ### Hats For Parties

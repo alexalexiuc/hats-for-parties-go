@@ -10,7 +10,6 @@ services:
       - PORT=${PORT}
       - MONGODB_URI=mongodb://mongodb:27017
       - REDIS_URI=cache:6379
-      # - REDIS_URL=redis://cache:6379
       - TOTAL_HATS=${TOTAL_HATS}
       - TOTAL_HATS_PER_PARTY=${TOTAL_HATS_PER_PARTY}
       - CLEANING_TIME_IN_SECONDS=${CLEANING_TIME_IN_SECONDS}
