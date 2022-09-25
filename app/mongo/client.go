@@ -11,6 +11,30 @@ import (
 	"hats-for-parties/config"
 )
 
+type MongoClient struct {
+	Client         *mongo.Client
+	HatsCollection *mongo.Collection
+}
+
+// func (c *MongoClient) HatsCollection() *mongo.Collection {
+// 	return c.hatsCollection
+// }
+
+// func (c *MongoClient) Client() *mongo.Client {
+// 	return c.client
+// }
+
+var MongoDbConn MongoClient
+
+func InitMongoClient() {
+	MongoDbConn.Client = connectToClient()
+	MongoDbConn.HatsCollection = MongoDbConn.Client.Database(config.ServiceConfig.DBName).Collection(config.ServiceConfig.HatsCollectionName)
+}
+
+func CloseMongoClient() {
+	MongoDbConn.Client.Disconnect(context.Background())
+}
+
 func connectToClient() *mongo.Client {
 	log.Println("Connecting to MongoDB...")
 	// Connect to the database
@@ -27,13 +51,4 @@ func connectToClient() *mongo.Client {
 	log.Println("Successfully connected and pinged.")
 
 	return client
-}
-
-func CreateDbConnection() *mongo.Database {
-	log.Printf("Creating database connection to database %s\n", config.ServiceConfig.DBName)
-	client := connectToClient()
-
-	db := client.Database(config.ServiceConfig.DBName)
-	log.Println("Successfully created database connection")
-	return db
 }

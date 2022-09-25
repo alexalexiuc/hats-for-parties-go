@@ -9,6 +9,7 @@ var ServiceConfig struct {
 	// Port is the port the server will listen on
 	Port                  int
 	MongoConnString       string
+	RedisConnString       string
 	TotalHats             int
 	TotalHatsPerParty     int
 	CleaningTimeInSeconds int
@@ -44,6 +45,7 @@ func getIntEnvVar(key string) int {
 func init() {
 	ServiceConfig.Port = getIntEnvVar("PORT")
 	ServiceConfig.MongoConnString = getStringEnvVar("MONGODB_URI")
+	ServiceConfig.RedisConnString = getStringEnvVar("REDIS_URI")
 	ServiceConfig.TotalHats = getIntEnvVar("TOTAL_HATS")
 	ServiceConfig.TotalHatsPerParty = getIntEnvVar("TOTAL_HATS_PER_PARTY")
 	ServiceConfig.CleaningTimeInSeconds = getIntEnvVar("CLEANING_TIME_IN_SECONDS")

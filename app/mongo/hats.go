@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hats-for-parties/cache"
 	"hats-for-parties/config"
 	"strconv"
 	"time"
@@ -12,9 +13,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
-
-var db = CreateDbConnection()
-var hatsCollection = db.Collection(config.ServiceConfig.HatsCollectionName)
 
 type Hat struct {
 	ID            primitive.ObjectID `bson:"_id,omitempty"`
@@ -27,7 +25,11 @@ func RentHats(partyId string, hatsNumber int) error {
 		return errors.New("You are not allowed to rent more than " + strconv.Itoa(config.ServiceConfig.TotalHatsPerParty) + " hats")
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), 15*time.Second)
+	// Obtain a lock for our given mutex. After this is successful, no one else
+	// can obtain the same lock (the same mutex name) until we unlock it.
+
+	cache.SetLockFlag()
+	defer cache.ReleaseLockFlag()
 
 	filter := bson.M{
 		"usedInPartyId": "",
@@ -44,7 +46,7 @@ func RentHats(partyId string, hatsNumber int) error {
 	findOpts.SetLimit(int64(hatsNumber))
 	findOpts.SetSort(bson.D{{"lastUsage", 1}})
 
-	cursor, err := hatsCollection.Find(ctx, filter, findOpts)
+	cursor, err := MongoDbConn.HatsCollection.Find(context.Background(), filter, findOpts)
 
 	if err != nil {
 		return err
@@ -52,7 +54,7 @@ func RentHats(partyId string, hatsNumber int) error {
 
 	var availableHats []Hat
 
-	if err = cursor.All(ctx, &availableHats); err != nil {
+	if err = cursor.All(context.Background(), &availableHats); err != nil {
 		panic(err)
 	}
 
@@ -62,12 +64,15 @@ func RentHats(partyId string, hatsNumber int) error {
 		return errors.New("There are not enough hats available, available hats: " + strconv.Itoa(len(availableHats)))
 	}
 
+	// For test purposes
+	// time.Sleep(5 * time.Second)
+
 	for _, hat := range availableHats {
 		hat.UsedInPartyId = partyId
 		hat.LastUsage = primitive.NewDateTimeFromTime(time.Now())
 
-		updateResult, err := hatsCollection.UpdateOne(
-			ctx,
+		updateResult, err := MongoDbConn.HatsCollection.UpdateOne(
+			context.Background(),
 			bson.M{"_id": hat.ID},
 			bson.D{
 				{"$set", bson.D{
@@ -97,7 +102,7 @@ func ReturnHats(partyId string) error {
 		},
 	}
 
-	updateResult, err := hatsCollection.UpdateMany(ctx, filter, update)
+	updateResult, err := MongoDbConn.HatsCollection.UpdateMany(ctx, filter, update)
 
 	if err != nil {
 		return err
