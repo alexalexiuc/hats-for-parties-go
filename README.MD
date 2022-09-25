@@ -35,11 +35,7 @@ There are 2 routes in the application, to start and end the party. The route tha
 When container is build first time, in `./mongo` is an initialize script, that creates ${TOTAL_HATS} documents with hat data.
 
 
-To ensure concurrency a redis mutex technique is used (https://github.com/go-redsync/redsync). When rent hats handler is called, it locks redis, and if Lock() is called again, it will wait until Unlock have been called. It is not ideal solution, but it is the best I could come up with in the given time. Ideally, you would probably have one more service with a single instance that only does write, and you could use a queue to send ot it messages, and scale API services.
-Or a single API service using mongoDB sessions(had some troubles ot set up redis replica, so decided to use just redis sync).
-
-P.S. Haven's added unit tests as running out of time, though router is prepared to be unit tested (handlers are assigned to an interface, so they can be mocked using mockgen for example).
-
+To ensure concurrency a redis mutex technique is used (https://github.com/go-redsync/redsync). When rent hats handler is called, it locks redis, and if Lock() is called again, it will wait until Unlock have been called.
 ## Requirements
 ### Hats For Parties
 
