@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"hats-for-parties/cache"
 	"hats-for-parties/config"
 	"strconv"
 	"time"
@@ -25,11 +24,18 @@ func RentHats(partyId string, hatsNumber int) error {
 		return errors.New("You are not allowed to rent more than " + strconv.Itoa(config.ServiceConfig.TotalHatsPerParty) + " hats")
 	}
 
-	// Obtain a lock for our given mutex. After this is successful, no one else
-	// can obtain the same lock (the same mutex name) until we unlock it.
-
-	cache.SetLockFlag()
-	defer cache.ReleaseLockFlag()
+	err := SetLockFlag()
+	if err != nil {
+		fmt.Printf("Error while setting lock flag: %v", err)
+		return err
+	}
+	defer func() {
+		defErr := ReleaseLockFlag()
+		if err == nil && defErr != nil {
+			fmt.Printf("Error while releasing lock flag: %v\n", defErr)
+			err = defErr
+		}
+	}()
 
 	filter := bson.M{
 		"usedInPartyId": "",
@@ -44,18 +50,20 @@ func RentHats(partyId string, hatsNumber int) error {
 
 	findOpts := options.Find()
 	findOpts.SetLimit(int64(hatsNumber))
-	findOpts.SetSort(bson.D{{"lastUsage", 1}})
+	findOpts.SetSort(bson.M{"lastUsage": 1})
 
 	cursor, err := MongoDbConn.HatsCollection.Find(context.Background(), filter, findOpts)
 
 	if err != nil {
+		fmt.Printf("Error while finding hats: %v", err)
 		return err
 	}
 
 	var availableHats []Hat
 
 	if err = cursor.All(context.Background(), &availableHats); err != nil {
-		panic(err)
+		fmt.Printf("Error while getting available hats: %v", err)
+		return err
 	}
 
 	fmt.Printf("availableHats: %+v\n", availableHats)
@@ -74,14 +82,15 @@ func RentHats(partyId string, hatsNumber int) error {
 		updateResult, err := MongoDbConn.HatsCollection.UpdateOne(
 			context.Background(),
 			bson.M{"_id": hat.ID},
-			bson.D{
-				{"$set", bson.D{
-					{"usedInPartyId", hat.UsedInPartyId},
-				}},
+			bson.M{
+				"$set": bson.M{
+					"usedInPartyId": hat.UsedInPartyId,
+				},
 			},
 		)
 
 		if err != nil {
+			fmt.Printf("Error while updating hat for rent: %v", err)
 			return err
 		}
 
@@ -92,7 +101,8 @@ func RentHats(partyId string, hatsNumber int) error {
 }
 
 func ReturnHats(partyId string) error {
-	ctx, _ := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, ctxCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer ctxCancel()
 
 	filter := bson.M{"usedInPartyId": partyId}
 	update := bson.M{
@@ -105,6 +115,7 @@ func ReturnHats(partyId string) error {
 	updateResult, err := MongoDbConn.HatsCollection.UpdateMany(ctx, filter, update)
 
 	if err != nil {
+		fmt.Printf("Error while updating hats for return: %v", err)
 		return err
 	}
 
@@ -116,3 +127,27 @@ func ReturnHats(partyId string) error {
 
 	return nil
 }
+
+// POC for findAndUpdate usage
+// missing sort and limit
+// 	filter := bson.M{
+// 		"$expr": bson.M{
+// 			"$eq": bson.A{
+// 				bson.M{
+// 					"$size": bson.M{
+// 						"$filter": bson.M{
+// 							"input": "$hats",
+// 							"as":    "hat",
+// 							"cond": bson.M{
+// 								"$and": bson.A{
+// 									bson.M{"$eq": bson.A{"$$hat.usedInPartyId", ""}},
+// 									bson.M{"$eq": bson.A{"$$hat.ind", 1}},
+// 								},
+// 							},
+// 						},
+// 					},
+// 				},
+// 				hatsNumber,
+// 			},
+// 		},
+// 	}

@@ -21,7 +21,7 @@ DB_NAME=hats-for-parties # Name of the database
 
 ## Endpoints
 * `POST /start-party/{hatsNumber}` - Rent hatsNumber hats for a party (returns party id to be used to return hats)
-* `POST end-party/{partyID}` - Return hats for party with ID partyID
+* `POST /end-party/{partyID}` - Return hats for party with ID partyID
 
 ## Technical Implementation
 There are 2 routes in the application, to start and end the party. The route that starts the party, returns also a 10 characters string with random capitalized letters that is assigned to the party. This string is used to end the party. The route that ends the party, returns the hats to the pool of available hats. The hats are stored in a MongoDB database in a collection called hats in the following format:
