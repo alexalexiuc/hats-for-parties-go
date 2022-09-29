@@ -14,21 +14,15 @@ import (
 type MongoClient struct {
 	Client         *mongo.Client
 	HatsCollection *mongo.Collection
+	LockFlag       *mongo.Collection
 }
-
-// func (c *MongoClient) HatsCollection() *mongo.Collection {
-// 	return c.hatsCollection
-// }
-
-// func (c *MongoClient) Client() *mongo.Client {
-// 	return c.client
-// }
 
 var MongoDbConn MongoClient
 
 func InitMongoClient() {
 	MongoDbConn.Client = connectToClient()
 	MongoDbConn.HatsCollection = MongoDbConn.Client.Database(config.ServiceConfig.DBName).Collection(config.ServiceConfig.HatsCollectionName)
+	MongoDbConn.LockFlag = MongoDbConn.Client.Database(config.ServiceConfig.DBName).Collection(config.ServiceConfig.LockFlagCollectionName)
 }
 
 func CloseMongoClient() {

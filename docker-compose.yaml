@@ -14,6 +14,7 @@ services:
       - TOTAL_HATS_PER_PARTY=${TOTAL_HATS_PER_PARTY}
       - CLEANING_TIME_IN_SECONDS=${CLEANING_TIME_IN_SECONDS}
       - HATS_COLLECTION_NAME=${HATS_COLLECTION_NAME}
+      - LOCK_FLAG_COLLECTION_NAME=${LOCK_FLAG_COLLECTION_NAME}
       - DB_NAME=${DB_NAME}
     depends_on:
       - mongodb_container
@@ -24,21 +25,11 @@ services:
       - TOTAL_HATS=${TOTAL_HATS}
       - DB_NAME=${DB_NAME}
       - HATS_COLLECTION_NAME=${HATS_COLLECTION_NAME}
+      - LOCK_FLAG_COLLECTION_NAME=${LOCK_FLAG_COLLECTION_NAME}
     ports:
       - 27017:27017
     volumes:
       - ./mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
-  cache:
-    image: redis:6.2-alpine
-    container_name: cache
-    restart: always
-    ports:
-      - 6379:6379
-    command: redis-server --save 20 1 --loglevel warning
-    volumes: 
-      - cache:/data
       
 volumes:
   mongodb_data_container:
-  cache:
-    driver: local
